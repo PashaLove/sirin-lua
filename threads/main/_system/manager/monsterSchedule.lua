@@ -314,8 +314,8 @@ local SirinMonsterScheduleSchedule = {}
 ---@field succRate integer
 ---@field duration integer
 local SirinMonsterScheduleScript = {
-	tRuleStartTime = 0,
-	tRuleEndTime = 0x7FFFFFFFFFFFFFFF,
+    tRuleStartTime = 0,
+    tRuleEndTime = 86400,
 }
 
 ---@return SirinMonsterScheduleScript self
@@ -328,8 +328,20 @@ end
 ---@param t? integer
 ---@return boolean
 function SirinMonsterScheduleScript:isActive(t)
-	local _t = t or sirinMonsterScheduleMgr.m_tLoopTime
-	return _t > self.tRuleStartTime and (self.tRuleEndTime == 0 or _t < self.tRuleEndTime)
+    local _t = t or sirinMonsterScheduleMgr.m_tLoopTime
+    
+    if self.tRuleStartTime < 86400 and self.tRuleEndTime < 86400 then
+        local currentTime = os.date("*t", _t)
+        local currentTimeInSeconds = currentTime.hour * 3600 + currentTime.min * 60 + currentTime.sec
+        
+        if self.tRuleStartTime <= self.tRuleEndTime then
+            return currentTimeInSeconds >= self.tRuleStartTime and currentTimeInSeconds <= self.tRuleEndTime
+        else
+            return currentTimeInSeconds >= self.tRuleStartTime or currentTimeInSeconds <= self.tRuleEndTime
+        end
+    else
+        return _t > self.tRuleStartTime and (self.tRuleEndTime == 0 or _t < self.tRuleEndTime)
+    end
 end
 
 ---@class (exact) SirinMonsterSpawnRule
@@ -574,13 +586,19 @@ function sirinMonsterScheduleMgr.validateScriptData()
 						break
 					end
 
-					if not monster_data.ruleStartTime:find("%d%d%-%d%d%-%d%d%d%d %d%d:%d%d:%d%d") then
+					-- Checks if it is full date format or just time
+					if monster_data.ruleStartTime:find("%d%d%-%d%d%-%d%d%d%d %d%d:%d%d:%d%d") then
+						-- Full format: "dd-mm-yyyy hh:mm:ss"
+						local d, m, y, h, mi, se = monster_data.ruleStartTime:match("(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)")
+						newSchedule.tRuleStartTime = os.time{year = y, month = m, day = d, hour = h, min = mi, sec = se}
+					elseif monster_data.ruleStartTime:find("%d%d:%d%d:%d%d") then
+						-- Time only format: "hh:mm:ss"
+						local h, mi, se = monster_data.ruleStartTime:match("(%d+):(%d+):(%d+)")
+						newSchedule.tRuleStartTime = tonumber(h) * 3600 + tonumber(mi) * 60 + tonumber(se)
+					else
 						Sirin.console.LogEx(ConsoleForeground.RED, ConsoleBackground.BLACK, string.format("Lua. sirinMonsterScheduleMgr.validateScriptData() id: %s 'ruleStartTime' invalid time format!\n", strCode))
 						break
 					end
-
-					local d, m, y, h, mi, se = monster_data.ruleStartTime:match("(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)")
-					newSchedule.tRuleStartTime = os.time{year = y, month = m, day = d, hour = h, min = mi, sec = se}
 				end
 
 				if monster_data.ruleEndTime then
@@ -589,13 +607,19 @@ function sirinMonsterScheduleMgr.validateScriptData()
 						break
 					end
 
-					if not monster_data.ruleEndTime:find("%d%d%-%d%d%-%d%d%d%d %d%d:%d%d:%d%d") then
+					-- Checks if it is full date format or just time
+					if monster_data.ruleEndTime:find("%d%d%-%d%d%-%d%d%d%d %d%d:%d%d:%d%d") then
+						-- Full format: "dd-mm-yyyy hh:mm:ss"
+						local d, m, y, h, mi, se = monster_data.ruleEndTime:match("(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)")
+						newSchedule.tRuleEndTime = os.time{year = y, month = m, day = d, hour = h, min = mi, sec = se}
+					elseif monster_data.ruleEndTime:find("%d%d:%d%d:%d%d") then
+						-- Time only format: "hh:mm:ss"
+						local h, mi, se = monster_data.ruleEndTime:match("(%d+):(%d+):(%d+)")
+						newSchedule.tRuleEndTime = tonumber(h) * 3600 + tonumber(mi) * 60 + tonumber(se)
+					else
 						Sirin.console.LogEx(ConsoleForeground.RED, ConsoleBackground.BLACK, string.format("Lua. sirinMonsterScheduleMgr.validateScriptData() id: %s 'ruleEndTime' invalid time format!\n", strCode))
 						break
 					end
-
-					local d, m, y, h, mi, se = monster_data.ruleEndTime:match("(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)")
-					newSchedule.tRuleEndTime = os.time{year = y, month = m, day = d, hour = h, min = mi, sec = se}
 				end
 
 				if type(monster_data.monsterCode) ~= "string" then
