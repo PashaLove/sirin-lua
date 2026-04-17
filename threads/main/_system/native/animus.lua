@@ -42,7 +42,7 @@ function sirinAnimusMgr.CalcAttExpForPlayer(pAnimus, pAT)
 			local pMonFld = baseToMonsterCharacter(pDst.m_pRecordSet)
 			local nHPLeft = pDst:GetHP() - nDam
 
-			if pMonFld.m_bMonsterCondition then -- CMonster::IsBossMonster()
+			if pMonFld.m_bMonsterCondition ~= 0 then -- CMonster::IsBossMonster()
 				bGetAttExp = false
 			end
 

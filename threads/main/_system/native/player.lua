@@ -2033,7 +2033,7 @@ function sirinPlayerMgr.calcExp(pPlayer, pDst, nDam, kPartyExpNotify)
 	local pMonFld = Sirin.mainThread.baseToMonsterCharacter(pDst.m_pRecordSet)
 	local nHPLeft = pDst:GetHP() - nDam
 
-	if pMonFld.m_bMonsterCondition then -- CMonster::IsBossMonster()
+	if pMonFld.m_bMonsterCondition ~= 0 then -- CMonster::IsBossMonster()
 		bGetAttExp = false
 	end
 
@@ -2442,7 +2442,7 @@ function sirinPlayerMgr.GetDefFC(pPlayer, nAttactPart, pAttChar)
 					local pCon = pPlayer.m_Param.m_dbEquip:m_List_get(i)
 
 					if pCon.m_byLoad == 1 then
-						fAvgEquipDefFC = fAvgEquipDefFC + baseToDfnEquipItem(g_Main:m_tblItemData_get(i):GetRecord(pCon.m_wItemIndex))
+						fAvgEquipDefFC = fAvgEquipDefFC + baseToDfnEquipItem(g_Main:m_tblItemData_get(i):GetRecord(pCon.m_wItemIndex)).m_fDefFc
 					end
 				end
 			end

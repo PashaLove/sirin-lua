@@ -1,6 +1,6 @@
 --[[
 
-Functions, which exists in native RF Online code. Guard tower related hooks.
+Functions, which exists in native RF Online code. Trap related hooks.
 
 --]]
 
