@@ -32,7 +32,6 @@ SirinLua.BoxOpenMgr = require('threads.main._system.manager.boxItemOut')
 SirinLua.ButtonMgr = require('threads.main._system.manager.npcButtons')
 SirinLua.PotionMgr = require('threads.main._system.manager.potionEffect')
 SirinLua.GmCommMgr = require('threads.main._system.manager.gmCommands')
-SirinLua.ClientWindowMgr = require('threads.main._system.manager.customWindow')
 
 
 -- Custom logic implementations
@@ -44,7 +43,6 @@ BotMgr = require('threads.main._system.manager.bot')
 
 
 -- Reloadable script handlers
-RiftMgr = require('threads.main._system.manager.rifts')
 CombineExMgr = require('threads.main._system.manager.combineEx')
 MonsterScheduleMgr = require('threads.main._system.manager.monsterSchedule')
 LootingMgr = require('threads.main._system.manager.itemLooting')
@@ -57,11 +55,8 @@ SirinLua.onThreadBegin = {
 	function() SirinLua.ButtonMgr.loadScripts() end,
 	function() SirinLua.PotionMgr.loadScripts() end,
 	function() SirinLua.GmCommMgr.loadScripts() end,
-	function() SirinLua.ClientWindowMgr.initHooks(); SirinLua.ClientWindowMgr.loadScripts() end,
 	function() PlayerMgr.initHooks(); PlayerMgr.init() end,
 	function() AutoLootMgr.initHooks() end,
-	function() TowerMgr.initHooks() end,
-	function() RiftMgr.initHooks(); RiftMgr.loadScripts(); SirinLua.LoopMgr.addMainLoopCallback(RiftMgr.m_strUUID, function() RiftMgr.onLoop() end, 100) end,
 	function() CombineExMgr.initHooks(); CombineExMgr.loadScripts() end,
 	function() BotMgr.initHooks(); BotMgr.init(); SirinLua.LoopMgr.addMainLoopCallback(BotMgr.m_strUUID, function() BotMgr.onLoop() end, 50) end,
 	function() MonsterScheduleMgr.initHooks(); MonsterScheduleMgr.loadScripts(); SirinLua.LoopMgr.addMainLoopCallback(MonsterScheduleMgr.m_strUUID, function() MonsterScheduleMgr.onLoop() end, 1000) end,
@@ -70,7 +65,6 @@ SirinLua.onThreadBegin = {
 
 SirinLua.onThreadEnd = {
 	function() SirinLua.PotionMgr.uninit() end,
-	function() RiftMgr.saveState() end,
 	function() MonsterScheduleMgr.saveState() end,
 	--function() LootingMgr.saveState() end,
 }

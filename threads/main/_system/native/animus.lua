@@ -42,7 +42,7 @@ function sirinAnimusMgr.CalcAttExpForPlayer(pAnimus, pAT)
 			local pMonFld = baseToMonsterCharacter(pDst.m_pRecordSet)
 			local nHPLeft = pDst:GetHP() - nDam
 
-			if pMonFld.m_bMonsterCondition then -- CMonster::IsBossMonster()
+			if pMonFld.m_bMonsterCondition ~= 0 then -- CMonster::IsBossMonster()
 				bGetAttExp = false
 			end
 
@@ -160,7 +160,7 @@ function sirinAnimusMgr.IsValidTarget(pAnimus)
 	local pTarget = pAnimus.m_pTarget
 
 	repeat
-		if not pTarget then
+		if not pTarget or not pAnimus.m_pMaster then
 			break
 		end
 
@@ -168,22 +168,46 @@ function sirinAnimusMgr.IsValidTarget(pAnimus)
 			break
 		end
 
-		if not pTarget:IsBeAttackedAble(true) then
+		if pTarget.m_pCurMap ~= pAnimus.m_pCurMap then
+			break
+		end
+
+		if pTarget.m_wMapLayerIndex ~= pAnimus.m_wMapLayerIndex then
+			break
+		end
+
+		if pTarget.m_dwCurSec == 0xFFFFFFFF or pAnimus.m_dwCurSec == 0xFFFFFFFF then
 			break
 		end
 
 		if pAnimus.m_byRoleCode ~= 3 then
+			if pAnimus.m_pTarget:GetObjRace() == pAnimus:GetObjRace() then
+				local pTarPlayer = objectToPlayer(pTarget)
+
+				if pTarget.m_ObjID.m_byID ~= ID_CHAR.player or (not pTarPlayer:IsPunished(1, false) and not pAnimus.m_pMaster:IsChaosMode()) then
+					break
+				end
+			end
+
+			if not pTarget:IsBeAttackedAble(true) then
+				break
+			end
+
 			if pTarget.m_bObserver then
 				break
 			end
 
-			local pCharTraget = objectToCharacter(pTarget)
-
-			if pCharTraget:GetStealth(true) then
+			if pTarget:GetStealth(true) then
 				break
 			end
 
 			if (pAnimus:IsInTown() or pTarget:IsInTown()) and not pTarget:IsAttackableInTown() then
+				break
+			end
+		else
+			local pTarPlayer = objectToPlayer(pTarget)
+
+			if pAnimus.m_pTarget:GetObjRace() ~= pAnimus:GetObjRace() or pTarget.m_ObjID.m_byID ~= ID_CHAR.player or (not IsSameObject(pTarget, pAnimus.m_pMaster) and (pTarPlayer:IsPunished(1, false) or pAnimus.m_pMaster:IsChaosMode())) then
 				break
 			end
 		end
@@ -221,14 +245,14 @@ function sirinAnimusMgr.make_gen_attack_param(pAnimus, pDst, byPart, nSkillIndex
 	pAP.nMaxAF = sk.m_MaxDmg
 
 	if pAnimus.m_byRoleCode == 4 then
-		pAP.nMaxAF = pAnimus.m_pMaster.m_EP:GetEff_Rate(_EFF_RATE.Fg_Animus)
+		pAP.nMaxAF = pAP.nMaxAF * pAnimus.m_pMaster.m_EP:GetEff_Rate(_EFF_RATE.Fg_Animus)
 	end
 
 	pAP.nMinSel = sk.m_MinProb
 	pAP.nMaxSel = sk.m_MaxProb
 
-	if pAnimus.m_byRoleCode == 4 then
-		pAP.nMaxAF = pAnimus.m_pMaster.m_EP:GetEff_Plus(_EFF_PLUS.Fg_Crt)
+	if pAnimus.m_byRoleCode == 2 then
+		pAP.nMaxSel = pAP.nMaxSel - pAnimus.m_pMaster.m_EP:GetEff_Plus(_EFF_PLUS.Fg_Crt)
 		pAP.nAttactType = 6
 		pAP.nExtentRange = 15
 
@@ -260,11 +284,6 @@ function sirinAnimusMgr.Attack(pAnimus, nSkill)
 		local nRet = pAnimus.m_pCurMap.m_Level.mBsp:CanYouGoThere(pAnimus.m_fCurPos_x, pAnimus.m_fCurPos_y, pAnimus.m_fCurPos_z, pTarget.m_fCurPos_x, pTarget.m_fCurPos_y, pTarget.m_fCurPos_z)
 
 		if nRet == 0 then
-			break
-		end
-
-		-- added in AoP
-		if pAnimus.m_pMaster and not pAnimus.m_pMaster:IsChaosMode() and pAnimus.m_pMaster:GetObjRace() == pTarget:GetObjRace() then
 			break
 		end
 
@@ -468,7 +487,7 @@ function sirinAnimusMgr.Heal(pAnimus, nSkill)
 			pAnimus.m_nHP = pAnimus.m_nHP - _10per
 
 			if pAnimus.m_nHP > 0 then
-
+				pAnimus:AlterHP_MasterReport()
 			else
 				pAnimus.m_nHP = 0
 				pAnimus.m_pMaster.m_byNextRecallReturn = 1
@@ -484,39 +503,39 @@ function sirinAnimusMgr.Heal(pAnimus, nSkill)
 	return false
 end
 
----@param _this CAnimus
+---@param pAnimus CAnimus
 ---@param nPart integer
 ---@return number
-function sirinAnimusMgr.GetDefGap(_this, nPart)
-	return _this.m_pRecord.m_fDefGap
+function sirinAnimusMgr.GetDefGap(pAnimus, nPart)
+	return pAnimus.m_pRecord.m_fDefGap
 end
 
----@param _this CAnimus
+---@param pAnimus CAnimus
 ---@param nPart integer
 ---@return number
-function sirinAnimusMgr.GetDefFacing(_this, nPart)
-	return _this.m_pRecord.m_fDefFacing
+function sirinAnimusMgr.GetDefFacing(pAnimus, nPart)
+	return pAnimus.m_pRecord.m_fDefFacing
 end
 
----@param _this CAnimus
+---@param pAnimus CAnimus
 ---@param nAttactPart integer
 ---@param pAttChar CCharacter
 ---@return integer nDefFC
 ---@return integer nConvertPart
-function sirinAnimusMgr.CPlayer__GetDefFC(_this, nAttactPart, pAttChar)
-	local defFC = _this.m_pRecord.m_nStdDefFc
+function sirinAnimusMgr.GetDefFC(pAnimus, nAttactPart, pAttChar)
+	local defFC = pAnimus.m_pRecord.m_nStdDefFc
 
-	if _this.m_byRoleCode == 1 and _this.m_pMaster then
-		defFC = math.floor(defFC * _this.m_pMaster.m_EP:GetEff_Rate(_EFF_RATE.Fg_Def))
+	if pAnimus.m_byRoleCode == 1 and pAnimus.m_pMaster then
+		defFC = math.floor(defFC * pAnimus.m_pMaster.m_EP:GetEff_Rate(_EFF_RATE.Fg_Def))
 	end
 
 	return defFC, 0
 end
 
----@param _this CAnimus
+---@param pAnimus CAnimus
 ---@return number
-function sirinAnimusMgr.GetWeaponAdjust(_this)
-	return _this.m_pRecord.m_fAttGap
+function sirinAnimusMgr.GetWeaponAdjust(pAnimus)
+	return pAnimus.m_pRecord.m_fAttGap
 end
 
 return sirinAnimusMgr

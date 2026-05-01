@@ -126,8 +126,9 @@ local function CDummyRift__SendMsg_MovePortal(pRift, pPlayer) end
 ---@param strParam string
 ---@param nAlterValue integer
 ---@param dwCashLeft integer
+---@param dwAccountSerial integer
 ---@param pPlayer? CPlayer
-local function AlterCashComplete(dwRetCode, strParam, nAlterValue, dwCashLeft, pPlayer) end
+local function AlterCashComplete(dwRetCode, strParam, nAlterValue, dwCashLeft, dwAccountSerial, pPlayer) end
 
 ---Purpose: buff/debuff effect insert notification.
 ---Hook positions: 'after_event'
@@ -188,52 +189,58 @@ local function CPlayer__IsHaveEmptyTower(pPlayer) return false end
 ---@param byCashChangeStateFlag integer
 local function CNetworkEX__OtherShapeRequest(pPlayer, wIndex, byReqType, byCashChangeStateFlag) end
 
----Purpose: Prepare avator load notification.
----Hook positions: 'after_event'
----@param dwAvatorSerial integer
-local function SirinWorldDB_UserLoad_Prepare(dwAvatorSerial) end
-
----Purpose: Prepare avator logout notification.
----Hook positions: 'after_event'
----@param dwAvatorSerial integer
-local function SirinWorldDB_UserLogout_Prepare(dwAvatorSerial) end
-
----Purpose: Prepare avator move lobby notification.
----Hook positions: 'after_event'
----@param dwAvatorSerial integer
-local function SirinWorldDB_UserLobby_Prepare(dwAvatorSerial) end
-
 ---Purpose: Prepare avator update notification.
----Hook positions: 'after_event'
+---Hook positions: 'pre_event'
 ---@param dwAvatorSerial integer
-local function SirinWorldDB_UserUpdate_Prepare(dwAvatorSerial) end
+---@param wClientIndex integer
+---@param byQryCase integer
+---@param multiBinaryData CMultiBinaryData
+local function SirinWorldDB_PlayerSave_Prepare(dwAvatorSerial, wClientIndex, byQryCase, multiBinaryData) end
+
+---Purpose: Complete avator insert notification.
+---Hook positions: 'after_event'
+---@param byErrCode integer
+---@param dwAvatorSerial integer
+local function SirinWorldDB_PlayerInsert_Complete(byErrCode, dwAvatorSerial) end
+
+---Purpose: Complete avator delete notification.
+---Hook positions: 'after_event'
+---@param byErrCode integer
+---@param dwAvatorSerial integer
+local function SirinWorldDB_PlayerDelete_Complete(byErrCode, dwAvatorSerial) end
 
 ---Purpose: Complete avator load notification.
 ---Hook positions: 'after_event'
 ---@param bError boolean
 ---@param byErrCode integer
 ---@param dwAvatorSerial integer
-local function SirinWorldDB_UserLoad_Complete(bError, byErrCode, dwAvatorSerial) end
+---@param wClientIndex integer
+---@param multiSQLResultSet CMultiSQLResultSet
+local function SirinWorldDB_PlayerLoad_Complete(bError, byErrCode, dwAvatorSerial, wClientIndex, multiSQLResultSet) end
 
 ---Purpose: Complete avator logout notification.
 ---Hook positions: 'pre_event'
 ---@param bError boolean
 ---@param bActive boolean
 ---@param dwAvatorSerial integer
-local function SirinWorldDB_UserLogout_Complete(bError, bActive, dwAvatorSerial) end
+---@param wClientIndex integer
+local function SirinWorldDB_PlayerLogout_Complete(bError, bActive, dwAvatorSerial, wClientIndex) end
 
 ---Purpose: Complete avator move lobby notification.
 ---Hook positions: 'pre_event'
 ---@param bError boolean
 ---@param bActive boolean
 ---@param dwAvatorSerial integer
-local function SirinWorldDB_UserLobby_Complete(bError, bActive, dwAvatorSerial) end
+---@param wClientIndex integer
+local function SirinWorldDB_PlayerLobby_Complete(bError, bActive, dwAvatorSerial, wClientIndex) end
 
 ---Purpose: Complete avator update notification.
 ---Hook positions: 'after_event'
 ---@param byErrCode integer
 ---@param dwAvatorSerial integer
-local function SirinWorldDB_UserUpdate_Complete(byErrCode, dwAvatorSerial) end
+---@param wClientIndex integer
+---@param multiBinaryData CMultiBinaryData
+local function SirinWorldDB_PlayerUpdate_Complete(byErrCode, dwAvatorSerial, wClientIndex, multiBinaryData) end
 
 ---Purpose: Custom chat commands handler
 ---Hook positions: 'original'
@@ -305,3 +312,91 @@ local function canUseExchangeBtnWithNoNPC(pPlayer, wExchangeID) return false end
 ---@param byType integer 0 - weapon/shield, 1 - armor, 2 - bullet, 3 - upgrade
 ---@return boolean
 local function canUseWithNoTool(pPlayer, byType) return false end
+
+---Purpose: Init default constants.
+---Hook positions: 'pre_event'
+local function initVoteParams() end
+
+---Purpose: Checks can player vote or not.
+---Hook positions: 'filter'
+---@param pPlayer CPlayer
+---@param bVote boolean Is real vote - true, votepaper send check - false
+---@return boolean
+local function canVote(pPlayer, bVote) return false end
+
+---Purpose: Power of player's voice
+---Hook positions: 'special'
+---@param pPlayer CPlayer
+---@return number
+local function getVoiceWeight(pPlayer) return 1.0 end
+
+---Purpose: Notification of player did vote.
+---Hook positions: 'after_event'
+---@param pPlayer CPlayer
+---@param bAbstain boolean
+---@param pCandidate? _candidate_info
+local function votePatriarch(pPlayer, bAbstain, pCandidate) end
+
+---Purpose: Check if player can register election.
+---Hook positions: 'special'
+---@param pPlayer CPlayer
+---@return integer #return 0 if no error.
+local function canRegistElection(pPlayer) return 0 end
+
+---Purpose: Notification of player did register in election.
+---Hook positions: 'after_event'
+---@param pPlayer CPlayer
+local function registElection(pPlayer) end
+
+---Purpose: Checks if auto fill race boss list by race rank is enabled.
+---Hook positions: 'filter'
+---@return boolean
+local function canAutoAddPatriarchGroup() return true end
+
+---Purpose: Honor guild set next complete notification.
+---Hook positions: 'after_event'
+---@param byErrCode integer
+---@param byRace integer
+local function HonorGuild_SetNextComplete(byErrCode, byRace) end
+
+---Purpose: Exchange button result notification.
+---Hook positions: 'pre_event'
+---@param pPlayer CPlayer
+---@param byErrCode integer
+---@param wTmpManualIndex integer
+---@param dwFee integer
+---@param luaMats table<integer, _STORAGE_LIST___db_con>
+---@param pOverlapCon? _STORAGE_LIST___db_con
+---@param pNewItem? _STORAGE_LIST___db_con
+local function combineButtonResult(pPlayer, byErrCode, wTmpManualIndex, dwFee, luaMats, pOverlapCon, pNewItem) end
+
+---Purpose: pre apply continuing effect hook. can change final buff time and level.
+---Hook positions: 'pre_event'
+---@param pPlayer CPlayer
+---@param pActPlayer CPlayer
+---@param pCont _sf_continous_ex
+local function PreContEffectInsert(pPlayer, pActPlayer, pCont) end
+
+---Purpose: check if user can send default recall request.
+---Hook positions: 'original'
+---@param pkPerformer CPlayer
+---@param pkDest CPlayer
+---@param bRecallParty boolean
+---@param bStone boolean
+---@param bBattleModeUse boolean
+---@return integer
+local function onRequestRecall(pkPerformer, pkDest, bRecallParty, bStone, bBattleModeUse) return 0 end
+
+---Purpose: check if user can complete default recall.
+---Hook positions: 'original'
+---@param pRequest CRecallRequest
+---@param pDstPlayer CPlayer
+---@return integer
+local function CRecallRequest__DecideRecall(pRequest, pDstPlayer) return 0 end
+
+---Purpose: check if user can complete custom recall.
+---Hook positions: 'original'
+---@param pRequest CRecallRequestEx
+---@param pDstPlayer CPlayer
+---@return integer
+local function CRecallRequestEx__DecideRecall(pRequest, pDstPlayer) return 0 end

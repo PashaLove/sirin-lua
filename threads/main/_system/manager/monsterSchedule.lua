@@ -58,7 +58,7 @@ local function getScheduleTime(script)
 		o.sec = 0
 
 		if schedule.scheduleType == 'dayOfMonth' then
-			for _,s in pairs(schedule.intervals) do
+			for _,s in ipairs(schedule.intervals) do
 				t = clone(o)
 				t.hour = 0
 				t.min = 0
@@ -115,7 +115,7 @@ local function getScheduleTime(script)
 		end
 
 		if schedule.scheduleType == 'dayOfWeek' then
-			for _,s in pairs(schedule.intervals) do
+			for _,s in ipairs(schedule.intervals) do
 				t = clone(o)
 				t.hour = 0
 				t.min = 0
@@ -182,7 +182,7 @@ local function getScheduleTime(script)
 		end
 
 		if schedule.scheduleType == 'day' then
-			for _,s in pairs(schedule.intervals) do
+			for _,s in ipairs(schedule.intervals) do
 				t = clone(o)
 				t.hour = 0
 				t.min = 0
@@ -224,7 +224,7 @@ local function getScheduleTime(script)
 		end
 
 		if schedule.scheduleType == 'hour' then
-			for _,s in pairs(schedule.intervals) do
+			for _,s in ipairs(schedule.intervals) do
 				t = clone(o)
 				t.min = 0
 
@@ -320,9 +320,10 @@ local SirinMonsterScheduleScript = {
 
 ---@return SirinMonsterScheduleScript self
 function SirinMonsterScheduleScript:new(o)
-	o = o or {}
+	local _i = clone(self)
+	for k,v in pairs(o or {}) do _i[k] = v end
 	self.__index = self
-	return setmetatable(o, self)
+	return setmetatable(_i, self)
 end
 
 ---@param t? integer
@@ -358,9 +359,10 @@ local SirinMonsterSpawnRule = {}
 
 ---@return SirinMonsterSpawnRule self
 function SirinMonsterSpawnRule:new(o)
-	o = o or {}
+	local _i = clone(self)
+	for k,v in pairs(o or {}) do _i[k] = v end
 	self.__index = self
-	return setmetatable(o, self)
+	return setmetatable(_i, self)
 end
 
 ---@param t integer
@@ -513,9 +515,10 @@ end
 
 ---@return SirinMonster self
 function SirinMonster:new(o)
-	o = o or {}
+	local _i = clone(self)
+	for k,v in pairs(o or {}) do _i[k] = v end
 	self.__index = self
-	return setmetatable(o, self)
+	return setmetatable(_i, self)
 end
 
 ---@param pMonster CMonster
@@ -647,7 +650,7 @@ function sirinMonsterScheduleMgr.validateScriptData()
 				local schedule_types = { "hour", "day", "dayOfWeek", "dayOfMonth", "delay" }
 				bSucc = false
 
-				for _,v in pairs(schedule_types) do
+				for _,v in ipairs(schedule_types) do
 					if v == monster_data.schedule.scheduleType then
 						bSucc = true
 						break
@@ -664,7 +667,7 @@ function sirinMonsterScheduleMgr.validateScriptData()
 					break
 				end
 
-				for k,v in pairs(monster_data.schedule.intervals) do
+				for k,v in ipairs(monster_data.schedule.intervals) do
 					if type(v) ~= "table" then
 						bSucc = false
 						Sirin.console.LogEx(ConsoleForeground.RED, ConsoleBackground.BLACK, string.format("Lua. sirinMonsterScheduleMgr.validateScriptData() id: %s 'schedule.intervals[%s]' is not a table type!\n", strCode, tostring(k)))
@@ -689,7 +692,7 @@ function sirinMonsterScheduleMgr.validateScriptData()
 
 				newSchedule.positions = {}
 
-				for k,v in pairs(monster_data.positions) do
+				for k,v in ipairs(monster_data.positions) do
 					if type(v) ~= "table" then
 						bSucc = false
 						Sirin.console.LogEx(ConsoleForeground.RED, ConsoleBackground.BLACK, string.format("Lua. sirinMonsterScheduleMgr.validateScriptData() id: %s 'positions[%s]' is not a table type!\n", strCode, tostring(k)))

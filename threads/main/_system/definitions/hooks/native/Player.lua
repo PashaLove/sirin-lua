@@ -131,6 +131,15 @@ local function CPlayer__Emb_DelStorage(pPlayer, byStorageCode, byStorageIndex, b
 ---@param Ret integer
 local function CPlayer__Emb_AlterDurPoint(pPlayer, byStorageCode, byStorageIndex, nAlter, bUpdate, bSend, Ret) end
 
+---Purpose: Alter item upgrade notification.
+---Hook positions: 'after_event'
+---@param pPlayer CPlayer
+---@param byUpgradeType integer
+---@param byStorageCode integer
+---@param byStorageIndex integer
+---@param dwGradeInfo integer
+local function CPlayer__Emb_ItemUpgrade(pPlayer, byUpgradeType, byStorageCode, byStorageIndex, dwGradeInfo) end
+
 ---Purpose: Calc pvp points routine.
 ---Hook positions: 'original'
 ---@param pKiller CPlayer
@@ -159,19 +168,19 @@ local function CPlayer__SetLevelD(pPlayer, byNewLevel) end
 ---Hook positions: 'original'
 ---@param pPlayer CPlayer
 ---@return integer
-local function CPlayer___CalcMaxHP(pPlayer, byNewLevel) return 1 end
+local function CPlayer___CalcMaxHP(pPlayer) return 1 end
 
 ---Purpose: Max FP calculation.
 ---Hook positions: 'original'
 ---@param pPlayer CPlayer
 ---@return integer
-local function CPlayer___CalcMaxFP(pPlayer, byNewLevel) return 0 end
+local function CPlayer___CalcMaxFP(pPlayer) return 0 end
 
 ---Purpose: Max SP calculation.
 ---Hook positions: 'original'
 ---@param pPlayer CPlayer
 ---@return integer
-local function CPlayer___CalcMaxSP(pPlayer, byNewLevel) return 0 end
+local function CPlayer___CalcMaxSP(pPlayer) return 0 end
 
 ---Purpose: Action point change notification.
 ---Hook positions: 'pre_event'
@@ -202,6 +211,14 @@ local function CPvpOrderView__Update_PvpTempCash(pOrderView, wIndex, dTempPvpCas
 ---@param IOCode PVP_MONEY_ALTER_TYPE
 local function CPlayer__AlterPvPCashBag(pPlayer, dAlter, IOCode) end
 
+---Purpose: Fixed PvP Cash point change on login notification.
+---Hook positions: 'after_event'
+---@param pOrderView CPvpOrderView
+---@param dPvpPoint number
+---@param pkInfo _PVP_ORDER_VIEW_DB_BASE
+---@param pPlayer CPlayer
+local function CPvpOrderView__SetPvpOrderView(pOrderView, dPvpPoint, pkInfo, pPlayer) end
+
 ---Purpose: Overrides HQ map
 ---Hook positions: 'original'
 ---@param pMapOper CMapOperation
@@ -218,3 +235,155 @@ local function CPlayer__SetStateFlag(pPlayer) end
 ---Hook positions: 'after_event'
 ---@param pPlayer CPlayer
 local function CPlayer__SetStateFlagEx(pPlayer) end
+
+---Purpose: Dodge rate calculation.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@return integer
+local function CPlayer__GetAvoidRate(pPlayer) return 0 end
+
+---Purpose: DefGap script value return.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@param nPart integer
+---@return number
+local function CPlayer__GetDefGap(pPlayer, nPart) return 0.5 end
+
+---Purpose: DefFacing script value return.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@param nPart integer
+---@return number
+local function CPlayer__GetDefFacing(pPlayer, nPart) return 0.5 end
+
+---Purpose: DefGap script value return.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@param nAttactPart integer
+---@param pAttackerChar CCharacter
+---@return integer #Err code
+---@return integer #Def point
+local function CPlayer__GetDefFC(pPlayer, nAttactPart, pAttackerChar) return 0, 0 end
+
+---Purpose: AttGap script value return.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@return integer
+local function CPlayer__GetWeaponAdjust(pPlayer) return 0.5 end
+
+---Purpose: DefGap script value return.
+---Hook positions: 'original'
+---@param pAMP AutominePersonal
+---@param nPart integer
+---@return number
+local function AutominePersonal__GetDefGap(pAMP, nPart) return 0.5 end
+
+---Purpose: DefFacing script value return.
+---Hook positions: 'original'
+---@param pAMP AutominePersonal
+---@param nPart integer
+---@return number
+local function AutominePersonal__GetDefFacing(pAMP, nPart) return 0.5 end
+
+---Purpose: DefGap script value return.
+---Hook positions: 'original'
+---@param pAMP AutominePersonal
+---@param nAttactPart integer
+---@param pAttackerChar CCharacter
+---@return integer #Err code
+---@return integer #Def point
+local function AutominePersonal__GetDefFC(pAMP, nAttactPart, pAttackerChar) return 0, 0 end
+
+---Purpose: Unit repair rutine.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@param bySlotIndex integer
+---@param bUseNPCLinkIntem boolean
+---@param bUnitRepairOut boolean AoP only
+local function CPlayer__pc_UnitFrameRepairRequest(pPlayer, bySlotIndex, bUseNPCLinkIntem, bUnitRepairOut) end
+
+---Purpose: Unit purchase rutine.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@param byFrameCode integer
+---@param bUseNPCLinkIntem boolean
+local function CPlayer__pc_UnitFrameBuyRequest(pPlayer, byFrameCode, bUseNPCLinkIntem) end
+
+---Purpose: Unit sell rutine.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@param bySlotIndex integer
+---@param bUseNPCLinkIntem boolean
+local function CPlayer__pc_UnitSellRequest(pPlayer, bySlotIndex, bUseNPCLinkIntem) end
+
+---Purpose: Unit part tuning rutine.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@param pMsg _unit_part_tuning_request_clzo
+---@param bUseNPCLinkIntem boolean
+local function CPlayer__pc_UnitPartTuningRequest(pPlayer, pMsg, bUseNPCLinkIntem) end
+
+---Purpose: Unit main ammo fill rutine.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@param pMsg _unit_bullet_fill_request_clzo
+---@param bUseNPCLinkIntem boolean
+local function CPlayer__pc_UnitBulletFillRequest(pPlayer, pMsg, bUseNPCLinkIntem) end
+
+---Purpose: Unit spare ammo fill rutine.
+---Hook positions: 'original'
+---@param pPlayer CPlayer
+---@param pMsg _unit_pack_fill_request_clzo
+---@param bUseNPCLinkIntem boolean
+local function CPlayer__pc_UnitPackFillRequest(pPlayer, pMsg, bUseNPCLinkIntem) end
+
+---Purpose: Unit ride change notification.
+---Hook positions: 'after_event'
+---@param pPlayer CPlayer
+---@param bRiding boolean
+---@param pCreateUnit CParkingUnit
+local function CPlayer__Emb_RidindUnit(pPlayer, bRiding, pCreateUnit) end
+
+---Purpose: Teleport potion filter.
+---Hook positions: 'filter'
+---@param pPlayer CPlayer
+---@param pDstObj CCharacter
+---@param bStone boolean
+---@return boolean
+local function CPlayer__SF_TeleportToDestination(pPlayer, pDstObj, bStone) return true end
+
+---Purpose: Map teleport filter.
+---Hook positions: 'filter'
+---@param pPlayer CPlayer
+---@param nPortalIndex integer
+---@param pConsumeSerial_1 integer
+---@param pConsumeSerial_2 integer
+---@param pConsumeSerial_3 integer
+---@return boolean
+local function CPlayer__pc_MovePortal(pPlayer, nPortalIndex, pConsumeSerial_1, pConsumeSerial_2, pConsumeSerial_3) return true end
+
+---Purpose: Change siege mode notification.
+---Hook positions: 'after_event'
+---@param pPlayer CPlayer
+---@param pSiegeItem _STORAGE_LIST___db_con
+local function CPlayer__SetSiege(pPlayer, pSiegeItem) end
+
+---Purpose: Manual mining ore gain event notification.
+---Hook positions: 'after_event'
+---@param pPlayer CPlayer
+---@param byErrCode integer
+---@param byNewOreIndex integer
+---@param wOreSerial integer
+---@param byOreDur integer
+---@param dwBatteryLeftDurPoint integer
+local function CPlayer__SendMsg_MineCompleteResult(pPlayer, byErrCode, byNewOreIndex, wOreSerial, byOreDur, dwBatteryLeftDurPoint) end
+
+---Purpose: Automatic mining ore gain even notification.
+---Hook positions: 'after_event'
+---@param pAMP AutominePersonal
+---@param wItemIndex integer
+---@param wItemSerial integer
+---@param byStorageIndex integer
+---@param nNewOre integer
+---@param dwDur integer
+local function AutominePersonal__make_minepacket(pAMP, wItemIndex, wItemSerial, byStorageIndex, nNewOre, dwDur) end

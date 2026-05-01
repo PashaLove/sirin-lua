@@ -675,6 +675,10 @@ function sirinQuestMgr.CQuestMgr__CheckReqAct(pQuestMgr, nActCode, pszReqCode, w
 
 		until true
 	end
+
+	if s_QuestCKRet.m_byCheckNum > 0 then
+		return Sirin.mainThread.cloneQuestResult()
+	end
 end
 
 return sirinQuestMgr

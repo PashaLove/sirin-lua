@@ -26,6 +26,22 @@ local monsterLevelDiffRate = {
 	},
 }
 
+---@enum LOOT_AUTH
+LOOT_AUTH = {
+	party = 1,
+	race = 2,
+	guild = 3,
+	party_boss = 4,
+	race_boss = 5,
+	guild_boss = 6,
+	free_for_all = 7,
+}
+
+---@type table<string, LOOT_AUTH>
+local eventMonsterList = {} -- please, fill this table at the end of the file
+
+local eventLootCode = { 0, 1, 2, 6, 4, 5, 3 }
+
 ---@class (exact) sirinLootingMgr
 ---@field m_nBossDropDelay integer
 ---@field m_nBbossDropRange integer
@@ -78,6 +94,28 @@ function sirinLootingMgr.loadScripts()
 		end
 
 		sirinLootingMgr.init()
+
+		local tmpEventMonList = {}
+
+		for mk,lt in pairs(eventMonsterList) do
+			repeat
+				local pFld = Sirin.mainThread.g_Main.m_tblMonster:GetRecord(mk)
+
+				if not pFld then
+					Sirin.console.LogEx(ConsoleForeground.RED, ConsoleBackground.BLACK, string.format("Lua. sirinLootingMgr.loadScripts() event monster '%s' not exists!\n", mk))
+					break
+				end
+
+				if lt < 1 or lt > 7 then
+					Sirin.console.LogEx(ConsoleForeground.RED, ConsoleBackground.BLACK, string.format("Lua. sirinLootingMgr.loadScripts() event monster '%s' loot type is out of range!\n", mk))
+					break
+				end
+
+				tmpEventMonList[pFld.m_dwIndex] = lt
+			until true
+		end
+
+		eventMonsterList = tmpEventMonList
 
 		if SirinTmp_ItemLooting then
 			---@type table<integer, table<integer, SirinLootRecord>>?
@@ -143,7 +181,7 @@ function sirinLootingMgr.validateScriptData()
 							break
 						end
 
-						if v[2] < 0 or v[2] > 0x7FFF7FFF then
+						if v[2] < 0 or v[2] > 0x7FFF8000 then
 							bSucc = false
 							Sirin.console.LogEx(ConsoleForeground.RED, ConsoleBackground.BLACK, string.format("Lua. sirinLootingMgr.validateScriptData() id: script['%s'][%d][2] value out of range!\n", strCode, k))
 							break
@@ -257,6 +295,9 @@ function sirinLootingMgr.saveState()
 			lootTable = {},
 			dwNextDropIndex = v.dwNextDropIndex,
 			dwAnnounceTime = v.dwAnnounceTime,
+			byEventLooting = v.byEventLooting,
+			byEventRace = v.byEventRace,
+			dwEventGuild = v.dwEventGuild,
 		}
 
 		for _,l in pairs(v.lootTable) do
@@ -315,6 +356,9 @@ function sirinLootingMgr.init()
 				lootTable = {},
 				dwNextDropIndex = v.dwNextDropIndex,
 				dwAnnounceTime = v.dwAnnounceTime,
+				byEventLooting = v.byEventLooting,
+				byEventRace = v.byEventRace,
+				dwEventGuild = v.dwEventGuild,
 			}
 
 			for _,l in pairs(v.lootTable) do
@@ -349,19 +393,33 @@ function sirinLootingMgr.onLoop()
 
 				if lootItem then
 					if sirinLootingMgr.m_bDebugLog then
-						local emsg = string.format("Loot Drop (%d). id: map: %s layer: %d pos(%.2f, %.2f, %.2f)", v.dwNextDropIndex, v.pMap.m_pMapSet.m_strCode, v.wLayerIndex, v.pos[1], v.pos[2], v.pos[3])
+						local emsg = string.format("Loot Drop (%d) id: '%s'; map: %s; layer: %d; pos(%.2f, %.2f, %.2f)", v.dwNextDropIndex, lootItem[2].m_strCode, v.pMap.m_pMapSet.m_strCode, v.wLayerIndex, v.pos[1], v.pos[2], v.pos[3])
 						print(emsg)
 					end
 
 					b.m_bBossMob = v.pMonRecFld and v.pMonRecFld.m_bMonsterCondition == 1 or false
 
-					if not Sirin.mainThread.createItemBox_Monster(b, lootItem[1], lootItem[2], 0, 0, v.pMap, v.wLayerIndex, v.pos[1], v.pos[2], v.pos[3], sirinLootingMgr.m_nBbossDropRange, false, v.dwOwnerObjSerial, v.wOwnerObjIndex, v.dwThrowerObjSerial, v.wThrowerObjIndex, v.pMonRecFld) then
-						break
+					if v.byEventLooting ~= 0 then
+						if not Sirin.mainThread.createItemBox_Monster(b, lootItem[1], lootItem[2], 0, 7, v.pMap, v.wLayerIndex, v.pos[1], v.pos[2], v.pos[3], sirinLootingMgr.m_nBbossDropRange, false, 0xFFFFFFFF, 0, 0, 0, v.pMonRecFld) then
+							local emsg = string.format("Error. box = null. Loot Drop (%d) id: '%s'; map: %s layer: %d pos(%.2f, %.2f, %.2f)", v.dwNextDropIndex, lootItem[2].m_strCode, v.pMap.m_pMapSet.m_strCode, v.wLayerIndex, v.pos[1], v.pos[2], v.pos[3])
+							print(emsg)
+							break
+						end
+
+						b.m_byEventLootAuth = eventLootCode[v.byEventLooting]
+						b.m_dwEventPartyBoss = v.dwPartyBossSerial
+						b.m_byEventRaceCode = v.byEventRace
+						b.m_dwEventGuildSerial = v.dwEventGuild
+					else
+						if not Sirin.mainThread.createItemBox_Monster(b, lootItem[1], lootItem[2], 0, 0, v.pMap, v.wLayerIndex, v.pos[1], v.pos[2], v.pos[3], sirinLootingMgr.m_nBbossDropRange, false, v.dwOwnerObjSerial, v.wOwnerObjIndex, v.dwThrowerObjSerial, v.wThrowerObjIndex, v.pMonRecFld) then
+							break
+						end
+
+						b.m_dwPartyBossSerial = v.dwPartyBossSerial
+						b.m_bPartyShare = v.bPartyShare
 					end
 
 					b.m_byThrowerID = ID_CHAR.monster
-					b.m_dwPartyBossSerial = v.dwPartyBossSerial
-					b.m_bPartyShare = v.bPartyShare
 					b.m_bCompDgr = v.byOwnerUserDgr ~= 0
 					v.dwNextDropIndex = v.dwNextDropIndex + 1
 				end
@@ -375,7 +433,7 @@ function sirinLootingMgr.onLoop()
 			local listPlayer = v.pMap:GetPlayerListInRadius(v.wLayerIndex, nSecIndex, 10, v.pos[1], v.pos[2], v.pos[3])
 
 			for _,p in pairs (listPlayer) do
-				NetMgr.privateAnnounceMsg(p, msg, 0xFFFF, ANN_TYPE.mid3, 0xFFFFFF00)
+				NetMgr.privateAnnounceMsg(p, msg, 0xFFFF, ANN_TYPE.mid2, 0xFFFFFF00)
 			end
 
 			if v.dwNextDropIndex > #v.lootTable then
@@ -569,7 +627,24 @@ function sirinLootingMgr.lootItemStd(pMonster, pPlayer)
 				lootTable = lootItems,
 				dwNextDropIndex = 1,
 				dwAnnounceTime = sirinLootingMgr.m_nBossDropDelay,
+				byEventLooting = eventMonsterList[pMonster.m_pMonRec.m_dwIndex] or 0,
+				byEventRace = pPlayer:GetObjRace(),
+				dwEventGuild = pPlayer.m_Param.m_pGuild and pPlayer.m_Param.m_pGuild.m_dwSerial or 0,
 			}
+
+			if dropData.byEventLooting ~= 0 then
+				if dropData.dwPartyBossSerial == 0xFFFFFFFF then
+					dropData.dwPartyBossSerial = pPlayer.m_id.dwSerial
+				end
+
+				if dropData.byEventLooting == LOOT_AUTH.party and not pPlayer.m_pPartyMgr:IsPartyMode() then
+					dropData.byEventLooting = LOOT_AUTH.party_boss
+				end
+
+				if (dropData.byEventLooting == LOOT_AUTH.guild or dropData.byEventLooting == LOOT_AUTH.guild_boss) and not pPlayer.m_Param.m_pGuild then
+					dropData.byEventLooting = LOOT_AUTH.party_boss
+				end
+			end
 
 			table.insert(sirinLootingMgr.m_delayedDrop, dropData)
 
@@ -585,9 +660,24 @@ function sirinLootingMgr.lootItemStd(pMonster, pPlayer)
 				end
 			end
 		else
+			local byEventLooting = eventMonsterList[pMonster.m_pMonRec.m_dwIndex] or 0
+
 			for _, v in pairs(lootItems) do
-				local pCon = Sirin.mainThread.makeLoot(v[1], v[2].m_dwIndex)
-				Sirin.mainThread.createItemBoxForAutoLoot(pCon, pOwner, dwPartyBossSerial, bPartyShare, pMonster, 0, pMonster.m_pCurMap, pMonster.m_wMapLayerIndex, {pMonster.m_fCurPos_x, pMonster.m_fCurPos_y, pMonster.m_fCurPos_z}, false)
+				if byEventLooting ~= 0 then
+					if byEventLooting == LOOT_AUTH.party and not pPlayer.m_pPartyMgr:IsPartyMode() then
+						byEventLooting = LOOT_AUTH.party_boss
+					end
+
+					if (byEventLooting == LOOT_AUTH.guild or byEventLooting == LOOT_AUTH.guild_boss) and not pPlayer.m_Param.m_pGuild then
+						byEventLooting = LOOT_AUTH.party_boss
+					end
+
+					Sirin.mainThread.createItemBox(v[2].m_strCode, 0, 0, 0, 7, pMonster.m_pCurMap, pMonster.m_wMapLayerIndex, pMonster.m_fCurPos_x, pMonster.m_fCurPos_y, pMonster.m_fCurPos_z,
+						pMonster.m_pMonRec.m_bMonsterCondition ~= 0 and sirinLootingMgr.m_nBbossDropRange or 10, false, nil, false, nil, pPlayer, eventLootCode[byEventLooting], false)
+				else
+					local pCon = Sirin.mainThread.makeLoot(v[1], v[2].m_dwIndex)
+					Sirin.mainThread.createItemBoxForAutoLoot(pCon, pOwner, dwPartyBossSerial, bPartyShare, pMonster, 0, pMonster.m_pCurMap, pMonster.m_wMapLayerIndex, {pMonster.m_fCurPos_x, pMonster.m_fCurPos_y, pMonster.m_fCurPos_z}, false)
+				end
 
 				if pMonster.m_pMonRec.m_bMonsterCondition == 1 then
 					Sirin.mainThread.CMonster__s_logTrace_Boss_Looting:Write(string.format("\t LootItem : %s", v[2].m_strCode))
@@ -636,6 +726,14 @@ local SirinLootRecord = {}
 ---@field lootTable table<integer, SirinLootItem>
 ---@field dwNextDropIndex integer
 ---@field dwAnnounceTime integer
+---@field byEventLooting integer
+---@field byEventRace integer
+---@field dwEventGuild integer
 local SirinDelayedLootRecord = {}
+
+-- fill this table
+eventMonsterList = {
+	-- ["00000"] = LOOT_AUTH.free_for_all,
+}
 
 return sirinLootingMgr

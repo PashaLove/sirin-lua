@@ -2033,7 +2033,7 @@ function sirinPlayerMgr.calcExp(pPlayer, pDst, nDam, kPartyExpNotify)
 	local pMonFld = Sirin.mainThread.baseToMonsterCharacter(pDst.m_pRecordSet)
 	local nHPLeft = pDst:GetHP() - nDam
 
-	if pMonFld.m_bMonsterCondition then -- CMonster::IsBossMonster()
+	if pMonFld.m_bMonsterCondition ~= 0 then -- CMonster::IsBossMonster()
 		bGetAttExp = false
 	end
 
@@ -2426,7 +2426,7 @@ end
 ---@param pAttChar CCharacter
 ---@return integer nDefFC
 ---@return integer nConvertPart
-function sirinPlayerMgr.CPlayer__GetDefFC(pPlayer, nAttactPart, pAttChar)
+function sirinPlayerMgr.GetDefFC(pPlayer, nAttactPart, pAttChar)
 	local defFC = 0
 	local nConvertPart = nAttactPart
 	pPlayer.m_nLastBeatenPart = nAttactPart
@@ -2442,7 +2442,7 @@ function sirinPlayerMgr.CPlayer__GetDefFC(pPlayer, nAttactPart, pAttChar)
 					local pCon = pPlayer.m_Param.m_dbEquip:m_List_get(i)
 
 					if pCon.m_byLoad == 1 then
-						fAvgEquipDefFC = fAvgEquipDefFC + baseToDfnEquipItem(g_Main:m_tblItemData_get(i):GetRecord(pCon.m_wItemIndex))
+						fAvgEquipDefFC = fAvgEquipDefFC + baseToDfnEquipItem(g_Main:m_tblItemData_get(i):GetRecord(pCon.m_wItemIndex)).m_fDefFc
 					end
 				end
 			end
@@ -2602,6 +2602,137 @@ function sirinPlayerMgr.CPlayer__GetDefFC(pPlayer, nAttactPart, pAttChar)
 	end
 
 	return math.floor(defFC), nConvertPart
+end
+
+---@param pPlayer CPlayer
+---@param bySlotIndex integer
+---@param bUseNPCLinkIntem boolean
+---@param bUnitRepairOut boolean
+function sirinPlayerMgr.CPlayer__pc_UnitFrameRepairRequest(pPlayer, bySlotIndex, bUseNPCLinkIntem, bUnitRepairOut)
+	local byErrCode = 0
+	local pData = pPlayer.m_Param.m_UnitDB:m_List_get(bySlotIndex)
+	local byFrame = pData.byFrame
+	local dwNewGauge = 0
+	local dwRepPrice = 0
+	local dwRepairValue = 0
+
+	if not pPlayer.m_pUserDB then
+		return
+	end
+
+	repeat
+		if pPlayer:GetObjRace() ~= 0 then
+			byErrCode = 1
+			break
+		end
+
+		if pPlayer.m_pUsingUnit then
+			byErrCode = 2
+			break
+		end
+
+		if not bUseNPCLinkIntem and not Sirin.mainThread.modButtonExt.IsBeNearButton(pPlayer, 10) then
+			byErrCode = 21
+			break
+		end
+
+		if byFrame == 255 then
+			byErrCode = 5
+			break
+		end
+
+		local pFld = Sirin.mainThread.g_Main.m_tblUnitFrame:GetRecord(byFrame)
+
+		if not pFld then
+			byErrCode = 5
+			break
+		end
+
+		local pFrameFld = Sirin.mainThread.baseToUnitFrame(pFld)
+
+		if pFrameFld.m_bRepair == 0 then
+			byErrCode = 37
+			break
+		end
+
+		dwNewGauge = pFrameFld.m_nUnit_HP
+		dwRepairValue = dwNewGauge - pData.dwGauge
+
+		if dwRepairValue <= 0 then
+			byErrCode = 14
+			break
+		end
+
+		dwRepPrice = pFrameFld.m_nRepPrice
+		local dwDesRepPrice = 0
+
+		for i = 0, 5 do
+			local pPartFld = Sirin.mainThread.g_Main:m_tblUnitPart_get(i):GetRecord(pData:byPart_get(i))
+
+			if pPartFld then
+				local pUnitPartFld = Sirin.mainThread.baseToUnitPart(pPartFld)
+
+				dwRepPrice = dwRepPrice + pUnitPartFld.m_nRepPrice
+
+				if pData.dwGauge == 0 then
+					dwDesRepPrice = dwDesRepPrice + pUnitPartFld.m_nDesrepPrice
+				end
+			end
+		end
+
+		dwRepPrice = math.floor(dwDesRepPrice + dwRepPrice * dwRepairValue * pPlayer.m_fUnitPv_RepPr)
+
+		if bUnitRepairOut then
+			byErrCode = 43
+			break
+		end
+
+		if pPlayer.m_Param:GetDalant() < dwRepPrice then
+			byErrCode = 7
+			break
+		end
+
+	until true
+
+	if byErrCode == 0 then
+		pData.dwGauge = dwNewGauge
+		local dbData = pPlayer.m_pUserDB.m_AvatorData.dbUnit:m_List_get(bySlotIndex)
+		dbData.dwGauge = dwNewGauge
+		pPlayer.m_pUserDB.m_bDataUpdate = true
+
+		if dwRepPrice > 0 then
+			pPlayer:AlterDalant(-dwRepPrice)
+			Sirin.WriteA(pPlayer.m_szItemHistoryFileName, string.format("PAY: Unit_Repair pay(D:%u G:0) $D:%u $G:%u", dwRepPrice, pPlayer.m_Param:GetDalant(), pPlayer.m_Param:GetGold()), false, false)
+		end
+	end
+
+	-- CPlayer::SendMsg_UnitFrameRepairResult(...)
+	--[[
+	struct _unit_frame_repair_result_zocl
+	{
+		char byRetCode;
+		char bySlotIndex;
+		unsigned int dwNewGauge;
+		unsigned int dwConsumDalant;
+		unsigned char by2ndValue; // AoP only. Value in braces of repair result window.
+		unsigned int dwLeftDalant;
+	};
+	--]]
+
+	local buf = Sirin.mainThread.CLuaSendBuffer.Instance()
+	buf:Init()
+	buf:PushUInt8(byErrCode)
+	buf:PushUInt8(bySlotIndex)
+	buf:PushUInt32(dwNewGauge)
+	buf:PushUInt32(dwRepPrice)
+
+	if SERVER_AOP then
+		buf:PushUInt8(math.floor(dwRepairValue / dwNewGauge * 100))
+	end
+
+	buf:PushUInt32(pPlayer.m_Param:GetDalant())
+	buf:SendBuffer(pPlayer, 23, 8)
+	--
 end
 
 return sirinPlayerMgr

@@ -59,6 +59,11 @@ local function init()
 	end
 	do
 		local t = {}
+		t.default = "%d Cash consumed"
+		assetTranslation:loadTranslationTable("guard.msg.item_sub.cash_coin", t)
+	end
+	do
+		local t = {}
 		t.default = "%s of Premium service obtained"
 		assetTranslation:loadTranslationTable("guard.msg.item_add.premium", t)
 	end
@@ -226,6 +231,11 @@ local function init()
 		local t = {}
 		t.default = "Skin"
 		assetTranslation:loadTranslationTable("guard.ui.tooltip.skin", t)
+	end
+	do
+		local t = {}
+		t.default = "Success rate: %.3f%%"
+		assetTranslation:loadTranslationTable("guard.ui.upgradeUI.succ_rate", t)
 	end
 end
 
